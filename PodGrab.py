@@ -2,9 +2,12 @@
 
 # PodGrab - A Python command line audio/video podcast downloader for RSS XML feeds.
 # Supported RSS item file types: MP3, M4V, OGG, FLV, MP4, MPG/MPEG, WMA, WMV, WEBM
-# Version: 1.1.1 - 25/08/2011
+# Version: 1.1.2 - 06/10/2011
 # Jonathan Baker 
 # jon@the-node.org (http://the-node.org)
+
+# Werner Avenant - added small changes to write M3U file of podcasts downloaded today
+# werner.avenant@gmail.com (http://www.collectiveminds.co.za)
 
 # Do with this code what you will, it's "open source". As a courtesy,
 # I would appreciate credit if you base your code on mine. If you find
@@ -48,6 +51,11 @@ MODE_IMPORT = 80
 
 DOWNLOAD_DIRECTORY = "podcasts"
 
+# Added 2011-10-06 Werner Avenant - added current_dictory here so it can be global
+current_directory = ''
+m3u_file = ''
+
+
 total_item = 0
 total_size = 0
 has_error = 0
@@ -63,8 +71,15 @@ def main(argv):
 	mail_address = ""
 	message = ""
 	mail = ""
+	# Added 2011-10-06 Werner Avenant
+	global current_directory
+	global m3u_file 
+	now = datetime.datetime.now();
+	m3u_file = str(now)[:10] + '.m3u' 
 	current_directory = os.path.realpath(os.path.dirname(sys.argv[0]))
 	download_directory = current_directory + os.sep + DOWNLOAD_DIRECTORY
+  
+  
 	global total_items
 	global total_size
 	total_items = 0
@@ -309,25 +324,29 @@ def iterate_feed(data, mode, download_dir, today, cur, conn, feed):
                 	print "Channel Title: ===" + channel_title + "==="
                 	print "Channel Link: " + channel_link
 			channel_title = clean_string(channel_title)
+                  
                 	channel_directory = download_dir + os.sep + channel_title
                 	if not os.path.exists(channel_directory):
                 		os.makedirs(channel_directory)
                 	print "Current Date: ", today
                 	if mode == MODE_DOWNLOAD:
                 		print "Bulk download. Processing..."
-                        	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_directory)
+                          # 2011-10-06 Replaced channel_directory with channel_title - needed for m3u file later
+                        	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_title) 
                         	print "\n", num_podcasts, "have been downloaded"
               		elif mode == MODE_SUBSCRIBE:
 				print "Feed to subscribe to: " + feed + ". Checking for database duplicate..."
 				if not does_sub_exist(cur, conn, feed):
 	                		print "Subscribe. Processing..."
-        	                	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_directory)
+                            # 2011-10-06 Replaced channel_directory with channel_title - needed for m3u file later
+        	                	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_title)
+                            
                 	       		print "\n", num_podcasts, "have been downloaded from your subscription"
 				else:
 					print "Subscription already exists! Skipping..."
            		elif mode == MODE_UPDATE:
                 		print "Updating RSS feeds. Processing..."
-                        	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_directory)
+                        	num_podcasts = iterate_channel(channel, today, mode, cur, conn, feed, channel_title)
                         	message += str(num_podcasts) + " have been downloaded from your subscription: '" + channel_title + "'\n"
 	except xml.parsers.expat.ExpatError:
 		print "ERROR - Malformed XML syntax in feed. Skipping..."
@@ -354,13 +373,15 @@ def clean_string(str):
         new_string_final = new_string_final.replace('--','-')
 	return new_string_final
 
-def write_podcast(item, chan_loc, date, type):
+# Change 2011-10-06 - Changed chan_loc to channel_title to help with relative path names
+# in the m3u file
+def write_podcast(item, channel_title, date, type):
 	(item_path, item_file_name) = os.path.split(item)
 	if len(item_file_name) > 50:
 		item_file_name = item_file_name[:50]
 	today = datetime.date.today()
-	item_file_name = today.strftime("%Y/%m/%d") + item_file_name
-	local_file = chan_loc + os.sep + clean_string(item_file_name)
+	item_file_name = today.strftime("%Y%m%d") + item_file_name # 2011-10-06 Removed slashes
+	local_file = current_directory + os.sep + DOWNLOAD_DIRECTORY + os.sep + channel_title + os.sep + clean_string(item_file_name)
 	if type == "video/quicktime" or type == "audio/mp4" or type == "video/mp4":
 		if not local_file.endswith(".mp4"):
 			local_file = local_file + ".mp4"
@@ -392,9 +413,17 @@ def write_podcast(item, chan_loc, date, type):
 		try:
 			item_file = urllib2.urlopen(item)
 			output = open(local_file, 'wb')
+			# 2011-10-06 Werner Avenant - For some reason the file name changes when 
+			# saved to disk - probably a python feature (sorry, only wrote my first line of python today)
+			item_file_name = os.path.basename(output.name)  
 			output.write(item_file.read())
 			output.close()
 			print "Podcast: ", item, " downloaded to: ", local_file
+			
+			# 2011-11-06 Append to m3u file
+			output = open(current_directory + os.sep + m3u_file, 'a')
+			output.write(DOWNLOAD_DIRECTORY + os.sep + channel_title + os.sep + item_file_name + "\n")
+			output.close()
 			return 1
 		except urllib2.URLError as e:
 			print "ERROR - Could not write item to file: ", e
@@ -483,7 +512,7 @@ def insert_subscription(cur, conn, chan, feed):
 	conn.commit()
 
 
-def iterate_channel(chan, today, mode, cur, conn, feed, chan_dir):
+def iterate_channel(chan, today, mode, cur, conn, feed, channel_title):
 	global total_items
 	global total_size
 	NUM_MAX_DOWNLOADS = 4
@@ -517,7 +546,8 @@ def iterate_channel(chan, today, mode, cur, conn, feed, chan_dir):
 				has_error = 1
 			if mode == MODE_DOWNLOAD:
 				if not has_error:
-					saved = write_podcast(item_file, chan_dir, item_date, item_type)
+          #Changed 2011-06-10 Replaced chan_dir with channel_title
+					saved = write_podcast(item_file, channel_title, item_date, item_type)
 				else:
 					saved = 0
 					print "This item has a badly formatted date. Cannot download!"
@@ -546,7 +576,7 @@ def iterate_channel(chan, today, mode, cur, conn, feed, chan_dir):
 					print "This item has a badly formatted date. Cannot download!"
 				if not has_error:
 					if mktime(struct_time_item) <= mktime(struct_time_today) and mktime(struct_time_item) >= mktime(struct_last_ep):
-						saved = write_podcast(item_file, chan_dir, item_date, item_type)
+						saved = write_podcast(item_file, channel_title, item_date, item_type)
 						if saved > 0:
 							print "\nTitle: " + item_title
 	                	                       	print "Date:  " + item_date

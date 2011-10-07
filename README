@@ -1,0 +1,19 @@
+PodGrab 
+
+A Python command line audio/video podcast downloader for RSS XML feeds.
+Supported RSS item file types: MP3, M4V, OGG, FLV, MP4, MPG/MPEG, WMA, WMV, WEBM
+
+Author: Jonathan Baker jon@the-node.org (http://the-node.org)
+
+For a full description and discussion, please see http://joshua14.homelinux.org/blog/?p=492
+
+Do with this code what you will, it's "open source". As a courtesy,
+I would appreciate credit if you base your code on mine. If you find
+a bug or think the code sucks balls, please let me know :-) 
+
+Outstanding issues:-
+ - Video podcasts which which are not direct URLs and are modified by PodGrab
+   in order to be grabbed won't display their size as the filenames haven't 
+   been stripped of their garbage URL info yet. It'll say 0 bytes, but don't 
+   worry, they've downloaded. 
+
