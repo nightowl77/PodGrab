@@ -48,6 +48,7 @@ MODE_MAIL_LIST = 78
 MODE_EXPORT = 79
 MODE_IMPORT = 80
 
+NUM_MAX_DOWNLOADS = 4
 
 DOWNLOAD_DIRECTORY = "podcasts"
 
@@ -78,8 +79,7 @@ def main(argv):
 	m3u_file = str(now)[:10] + '.m3u' 
 	current_directory = os.path.realpath(os.path.dirname(sys.argv[0]))
 	download_directory = current_directory + os.sep + DOWNLOAD_DIRECTORY
-  
-  
+
 	global total_items
 	global total_size
 	total_items = 0
@@ -111,59 +111,71 @@ def main(argv):
 		else:
 			print "XML data source opened\n"
 			mode = MODE_SUBSCRIBE
+			
 	elif arguments.dl_feed_url:
 		feed_url = arguments.dl_feed_url
 		data = open_datasource(feed_url)
 		if not data:
-                        error_string = "Not a valid XML file or URL feed!"
-                        has_error = 1 
-                else:
-                        print "XML data source opened\n"
+			error_string = "Not a valid XML file or URL feed!"
+			has_error = 1 
+		else:
+			print "XML data source opened\n"
 			mode = MODE_DOWNLOAD
+			
 	elif arguments.unsub_url:
 		feed_url = arguments.unsub_url
 		mode = MODE_UNSUBSCRIBE
+		
 	elif arguments.list_subs:
 		mode = MODE_LIST
+		
 	elif arguments.update_subs:
 		mode = MODE_UPDATE
+		
 	elif arguments.mail_address_add:
 		mail_address = arguments.mail_address_add
 		mode = MODE_MAIL_ADD
+		
 	elif arguments.mail_address_delete:
 		mail_address = arguments.mail_address_delete
 		mode = MODE_MAIL_DELETE
+		
 	elif arguments.list_mail:
 		mode = MODE_MAIL_LIST
+		
 	elif arguments.opml_import:
 		import_file_name = arguments.opml_import
 		mode = MODE_IMPORT
+		
 	elif arguments.opml_export:
 		mode = MODE_EXPORT
+		
 	else:
 		error_string = "No Arguments supplied - for usage run 'PodGrab.py -h'"
 		has_error = 1
+		
 	print "Default encoding: " + sys.getdefaultencoding()
 	todays_date = strftime("%a, %d %b %Y %H:%M:%S", gmtime())
 	print "Current Directory: ", current_directory
-     	if does_database_exist(current_directory):
+	if does_database_exist(current_directory):
 		connection = connect_database(current_directory)
 		if not connection:
 			error_string = "Could not connect to PodGrab database file!"
 			has_error = 1
 		else:
 			cursor = connection.cursor()
-    	else:
-        	print "PodGrab database missing. Creating..."
+	else:
+		print "PodGrab database missing. Creating..."
 		connection = connect_database(current_directory)
 		if not connection:
-                	error_string = "Could not create PodGrab database file!"
+			error_string = "Could not create PodGrab database file!"
 			has_error = 1
 		else:
 			print "PodGrab database created"
 			cursor = connection.cursor()
 			setup_database(cursor, connection)
 			print "Database setup complete"
+			
 	if not os.path.exists(download_directory):
 		print "Podcast download directory is missing. Creating..."
 		try:
@@ -367,47 +379,58 @@ def clean_string(str):
 	for c in new_string:
 		if c.isalnum() or c == "-" or c == "." or c.isspace():
 			new_string_final = new_string_final + ''.join(c)
-	new_string_final = new_string_final.strip()
-        new_string_final = new_string_final.replace(' ','-')
-        new_string_final = new_string_final.replace('---','-')
-        new_string_final = new_string_final.replace('--','-')
+			new_string_final = new_string_final.strip()
+			new_string_final = new_string_final.replace(' ','-')
+			new_string_final = new_string_final.replace('---','-')
+			new_string_final = new_string_final.replace('--','-')
+
 	return new_string_final
 
 # Change 2011-10-06 - Changed chan_loc to channel_title to help with relative path names
 # in the m3u file
 def write_podcast(item, channel_title, date, type):
 	(item_path, item_file_name) = os.path.split(item)
+	
 	if len(item_file_name) > 50:
 		item_file_name = item_file_name[:50]
-	today = datetime.date.today()
-	item_file_name = today.strftime("%Y%m%d") + item_file_name # 2011-10-06 Removed slashes
+	
 	local_file = current_directory + os.sep + DOWNLOAD_DIRECTORY + os.sep + channel_title + os.sep + clean_string(item_file_name)
 	if type == "video/quicktime" or type == "audio/mp4" or type == "video/mp4":
 		if not local_file.endswith(".mp4"):
 			local_file = local_file + ".mp4"
+      
 	elif type == "video/mpeg":
-                if not local_file.endswith(".mpg"):
-                        local_file = local_file + ".mpg"
+		if not local_file.endswith(".mpg"):
+			local_file = local_file + ".mpg"
+      
 	elif type == "video/x-flv":
 		if not local_file.endswith(".flv"):
 			local_file = local_file + ".flv"
+      
 	elif type == "video/x-ms-wmv":
 		if not local_file.endswith(".wmv"):
-                        local_file = local_file + ".wmv"
+			local_file = local_file + ".wmv"
+
 	elif type == "video/webm" or type == "audio/webm":
 		if not local_file.endswith(".webm"):
 			local_file = local_file + ".webm"
+
 	elif type == "audio/mpeg":
-                if not local_file.endswith(".mp3"):
-                        local_file = local_file + ".mp3"
+		if not local_file.endswith(".mp3"):
+			local_file = local_file + ".mp3"
+
 	elif type == "audio/ogg" or type == "video/ogg" or type == "audio/vorbis":
-                if not local_file.endswith(".ogg"):
-                        local_file = local_file + ".ogg"
+		if not local_file.endswith(".ogg"):
+			local_file = local_file + ".ogg"
 	elif type == "audio/x-ms-wma" or type == "audio/x-ms-wax":
 		if not local_file.endswith(".wma"):
-                        local_file = local_file + ".wma"	
-	if os.path.exists(local_file):
-		return 0
+			local_file = local_file + ".wma"
+      
+	# Check if file exists, but if the file size is zero (which happens when the user
+	# presses Crtl-C during a download) - the the code should go ahead and download 
+	# as if the file didn't exist
+	if os.path.exists(local_file) and os.path.getsize(local_file) != 0:
+		return 'File Exists'
 	else:
 		print "\nDownloading " + item_file_name + " which was published on " + date
 		try:
@@ -424,9 +447,10 @@ def write_podcast(item, channel_title, date, type):
 			output = open(current_directory + os.sep + m3u_file, 'a')
 			output.write(DOWNLOAD_DIRECTORY + os.sep + channel_title + os.sep + item_file_name + "\n")
 			output.close()
-			return 1
+			return 'Successful Write'
 		except urllib2.URLError as e:
 			print "ERROR - Could not write item to file: ", e
+			return 'Write Error'
 
 
 def does_database_exist(curr_loc):
@@ -507,7 +531,7 @@ def setup_database(cur, conn):
 def insert_subscription(cur, conn, chan, feed):
 	chan.replace(' ', '-')
 	chan.replace('---','-')
-	row = (chan, feed, "NULL")
+	row = (chan, feed, "Thu, 01 Jan 1970 00:00:00") # Added a correctly formatted date here so we can avoid an ugly "if date == null" in update_subscription later
 	cur.execute('INSERT INTO subscriptions(channel, feed, last_ep) VALUES (?, ?, ?)', row)
 	conn.commit()
 
@@ -515,85 +539,86 @@ def insert_subscription(cur, conn, chan, feed):
 def iterate_channel(chan, today, mode, cur, conn, feed, channel_title):
 	global total_items
 	global total_size
-	NUM_MAX_DOWNLOADS = 4
-	saved = 0
 	num = 0
+	saved = 0
 	size = 0
 	last_ep = "NULL"
 	print "Iterating channel..."
-	if mode == MODE_SUBSCRIBE:
-		print "Feed: " + feed
-		if does_sub_exist(cur, conn, feed):
-			print "Podcast subscription exists - getting latest podcast"
-			last_ep = get_last_subscription_downloaded(cur, conn, feed)
-		else:
-			print "Podcast subscription is new - getting previous podcast"
-			insert_subscription(cur, conn, chan.getElementsByTagName('title')[0].firstChild.data, feed)
+	
+	if does_sub_exist(cur, conn, feed):
+		print "Podcast subscription exists"
+		
+	else:
+		print "Podcast subscription is new - getting previous podcast"
+		insert_subscription(cur, conn, chan.getElementsByTagName('title')[0].firstChild.data, feed)
+
+	last_ep = get_last_subscription_downloaded(cur, conn, feed)
+	
+	### NB NB - The logic here is that we get the "last_ep" before we enter the loop 
+	### The result is that it allows the code to "catch up" on missed episodes because 
+	### we never update the "last_ep" while inside the loop.  
+	
 	for item in chan.getElementsByTagName('item'):
 		try:
 			item_title = item.getElementsByTagName('title')[0].firstChild.data
-                	item_date = item.getElementsByTagName('pubDate')[0].firstChild.data
+			item_date = item.getElementsByTagName('pubDate')[0].firstChild.data
 			item_file = item.getElementsByTagName('enclosure')[0].getAttribute('url')
-                	item_size = item.getElementsByTagName('enclosure')[0].getAttribute('length')
+			item_size = item.getElementsByTagName('enclosure')[0].getAttribute('length')
 			item_type = item.getElementsByTagName('enclosure')[0].getAttribute('type')
-                	struct_time_today = strptime(today, "%a, %d %b %Y %H:%M:%S")
+			struct_time_today = strptime(today, "%a, %d %b %Y %H:%M:%S")
+			
 			try:
-	                	struct_time_item = strptime(fix_date(item_date), "%a, %d %b %Y %H:%M:%S")
+				struct_time_item = strptime(fix_date(item_date), "%a, %d %b %Y %H:%M:%S")
 				has_error = 0	
 			except TypeError:
 				has_error = 1
 			except ValueError:
 				has_error = 1
-			if mode == MODE_DOWNLOAD:
-				if not has_error:
-          #Changed 2011-06-10 Replaced chan_dir with channel_title
+			
+			try:
+				struct_last_ep = strptime(last_ep, "%a, %d %b %Y %H:%M:%S")
+				has_error = 0
+			except TypeError:
+				has_error = 1
+				print "This item has a badly formatted date. Cannot download!"
+			except ValueError:
+				has_error = 1
+				print "This item has a badly formatted date. Cannot download!"
+				
+			if not has_error:
+				if mktime(struct_time_item) > mktime(struct_last_ep) or mode == MODE_DOWNLOAD:
 					saved = write_podcast(item_file, channel_title, item_date, item_type)
+					
+					if saved == 'File Exists':
+						print "File Existed - updating local database's Last Episode";
+						update_subscription(cur, conn, feed, fix_date(item_date))
+						
+					if saved == 'Successful Write':
+						print "\nTitle: " + item_title
+						print "Date:  " + item_date
+						print "File:  " + item_file
+						print "Size:  " + item_size + " bytes"
+						print "Type:  " + item_type
+						update_subscription(cur, conn, feed, fix_date(item_date))
+						num += 1
+						size = size + int(item_size)
+						total_size += size
+						total_items += 1
+					
+					if (mode == MODE_SUBSCRIBE): # In subscribe mode we only want 1 this loop to execute once
+						break;
+						
+					if (num >= NUM_MAX_DOWNLOADS):
+						print "Maximum session download of " + str(NUM_MAX_DOWNLOADS) + " podcasts has been reached. Exiting."
+						break
 				else:
-					saved = 0
-					print "This item has a badly formatted date. Cannot download!"
-				if saved > 0:
-					print "\nTitle: " + item_title
-	                               	print "Date:  " + item_date
-        	                       	print "File:  " + item_file
-                	               	print "Size:  " + item_size + " bytes"
-                                	print "Downloading " + item_file + "..."
-        	               	num = num + saved
-				size = size + int(item_size)
-				total_size += size
-				total_items += num
-			elif mode == MODE_SUBSCRIBE or mode == MODE_UPDATE:
-				if (last_ep == "NULL"):
-					last_ep = fix_date(item_date)
-					update_subscription(cur, conn, feed, last_ep)
-				try:
-					struct_last_ep = strptime(last_ep, "%a, %d %b %Y %H:%M:%S")
-					has_error = 0
-				except TypeError:
-					has_error = 1
-					print "This item has a badly formatted date. Cannot download!"
-				except ValueError:
-					has_error = 1
-					print "This item has a badly formatted date. Cannot download!"
-				if not has_error:
-					if mktime(struct_time_item) <= mktime(struct_time_today) and mktime(struct_time_item) >= mktime(struct_last_ep):
-						saved = write_podcast(item_file, channel_title, item_date, item_type)
-						if saved > 0:
-							print "\nTitle: " + item_title
-	                	                       	print "Date:  " + item_date
-                                	        	print "File:  " + item_file
-                	                	       	print "Size:  " + item_size + " bytes"
-							print "Type:  " + item_type
-							update_subscription(cur, conn, feed, fix_date(item_date))
-							num = num + saved
-							size = size + int(item_size)
-							total_size += size
-							total_items += num
-						if (num >= NUM_MAX_DOWNLOADS):
-							print "Maximum session download of " + str(NUM_MAX_DOWNLOADS) + " podcasts has been reached. Exiting."
-							break
+					print "According to database we already have the episode dated " + item_date
+					break
+					
 		except IndexError, e:
 			#traceback.print_exc()
 			print "This RSS item has no downloadable URL link for the podcast for '" + item_title  + "'. Skipping..."
+	
 	return str(num) + " podcasts totalling " + str(size) + " bytes"
 
 
@@ -656,15 +681,20 @@ def get_subscriptions(cur, conn):
 
 
 def update_subscription(cur, conn, feed, date):
-	row = (date, feed)
-	cur.execute('UPDATE subscriptions SET last_ep = ? where feed = ?', row)
-	conn.commit()
+	# Make sure that the date we are trying to write is newer than the last episode
+	# Presumes that "null" dates will be saved in DB as 1970-01-01 (unix "start" time)
+	existing_last_ep = get_last_subscription_downloaded(cur, conn, feed)
+	if mktime(strptime(existing_last_ep, "%a, %d %b %Y %H:%M:%S")) <= mktime(strptime(date, "%a, %d %b %Y %H:%M:%S")):
+		row = (date, feed)
+		cur.execute('UPDATE subscriptions SET last_ep = ? where feed = ?', row)
+		conn.commit()
 
 
 def get_last_subscription_downloaded(cur, conn, feed):
 	row = (feed,)
 	cur.execute('SELECT last_ep FROM subscriptions WHERE feed = ?', row)
-	return cur.fetchone()
+	rec = cur.fetchone()
+	return rec[0] 
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
