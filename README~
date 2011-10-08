@@ -1,4 +1,4 @@
-==== PODGRAB =====
+PodGrab 
 
 A Python command line audio/video podcast downloader for RSS XML feeds.
 Supported RSS item file types: MP3, M4V, OGG, FLV, MP4, MPG/MPEG, WMA, WMV, WEBM
@@ -17,19 +17,16 @@ Outstanding issues:-
    been stripped of their garbage URL info yet. It'll say 0 bytes, but don't 
    worry, they've downloaded. 
 
-==== CHANGES MADE AFTER FORK ====
+CHANGES MADE AFTER FORK
 
-Author: Werner Avenant werner.avenant@gmail.com (http://www.collectiveminds.co.za)
-
-Changes after fork:
-
-    - Added support for M3U files listing all files downloaded that day    
+Changes after fork
+    
     - Last Episode Detection wasn't always right. It wasn't noticable
       because if the file existed it wouldn't download the episode. Rewrote
       last_ep logic
     - Changed write_podcast to return if a file existed. This in turn
       updates the "last_ep" in the database
-    - Refactored/cleaned up iterate_channel
+    - Refactored cleaned up iterate_channel
     - Function update_subscription will check to see if the last_ep is older
       than the existing last_ep
     - Moved NUM_MAX_DOWNLOAD to the front of the file for easy configuration
